@@ -137,7 +137,9 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					propMain.addValue(wordform);
 					propXmlid.addValue(xmlid);
 					propPartOfSpeech.addValue(pos);
-					propPosHead.addValue(pos.split("\\(")[0]);
+					String posHead = pos.split("\\(")[0];
+					if (posHead.length() > 0)
+						propPosHead.addValue(posHead);
 					propLemma.addValue(lemma);
 					
 					if (pos.length() == 0 || lemma.length() == 0) {
