@@ -104,6 +104,9 @@ public class MetadataFetcherCgnImdi extends MetadataFetcher {
 		String[] parts = fromInputFile.split("/");
 		ourDocIndexer.addMetadataField("Collection_title", parts[parts.length-2]);
 
+		ourDocIndexer.addMetadataField("AudioExportFormat", "wav");
+		ourDocIndexer.addMetadataField("AudioWebPlayFormat", "mp3");
+		
 		try {
 			InputStream is;
 			if (metadataZipFile != null) {
