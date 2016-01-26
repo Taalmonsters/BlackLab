@@ -17,15 +17,17 @@ package nl.inl.blacklab.index.complex;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.IntField;
-
-import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting;
 
 
 /**
@@ -49,15 +51,21 @@ import nl.inl.blacklab.index.complex.ComplexFieldProperty.SensitivitySetting;
  */
 public class ComplexField {
 
-	private Map<String, ComplexFieldProperty> properties = new HashMap<String, ComplexFieldProperty>();
+	private Map<String, ComplexFieldProperty> properties = new HashMap<>();
 
-	private List<Integer> start = new ArrayList<Integer>();
+	private List<Integer> start = new ArrayList<>();
 
-	private List<Integer> end = new ArrayList<Integer>();
+	private List<Integer> end = new ArrayList<>();
 
 	private String fieldName;
 
 	private ComplexFieldProperty mainProperty;
+
+	private Set<String> noForwardIndexProps = Collections.emptySet();
+
+	public void setNoForwardIndexProps(Set<String> noForwardIndexProps) {
+		this.noForwardIndexProps = noForwardIndexProps;
+	}
 
 	/**
 	 * Construct a ComplexField object with a main property
@@ -82,6 +90,9 @@ public class ComplexField {
 
 	public ComplexFieldProperty addProperty(String name, SensitivitySetting sensitivity, boolean includePayloads) {
 		ComplexFieldProperty p = new ComplexFieldProperty(name, sensitivity, false, includePayloads);
+		if (noForwardIndexProps.contains(name)) {
+			p.setForwardIndex(false);
+		}
 		properties.put(name, p);
 		return p;
 	}

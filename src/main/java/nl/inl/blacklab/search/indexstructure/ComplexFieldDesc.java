@@ -2,15 +2,17 @@ package nl.inl.blacklab.search.indexstructure;
 
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
-
-import org.apache.log4j.Logger;
-import org.apache.lucene.index.IndexReader;
 
 import nl.inl.blacklab.index.complex.ComplexFieldUtil;
 import nl.inl.blacklab.index.complex.ComplexFieldUtil.BookkeepFieldType;
 import nl.inl.util.StringUtil;
+
+import org.apache.log4j.Logger;
+import org.apache.lucene.index.IndexReader;
 
 /** Description of a complex field */
 public class ComplexFieldDesc extends BaseFieldDesc {
@@ -34,9 +36,12 @@ public class ComplexFieldDesc extends BaseFieldDesc {
 	/** Are there XML tag locations stored for this field? */
 	private boolean xmlTags;
 
+	/** These properties should not get a forward index. */
+	private Set<String> noForwardIndexProps = Collections.emptySet();
+
 	public ComplexFieldDesc(String name) {
 		super(name);
-		props = new TreeMap<String, PropertyDesc>();
+		props = new TreeMap<>();
 		contentStore = false;
 		lengthInTokens = false;
 		xmlTags = false;
@@ -229,6 +234,14 @@ public class ComplexFieldDesc extends BaseFieldDesc {
 		this.mainPropertyName = mainPropertyName;
 		if (props.containsKey(mainPropertyName))
 			mainProperty = props.get(mainPropertyName);
+	}
+
+	public void setNoForwardIndexProps(Set<String> noForwardIndexProps) {
+		this.noForwardIndexProps = noForwardIndexProps;
+	}
+
+	public Set<String> getNoForwardIndexProps() {
+		return noForwardIndexProps;
 	}
 
 }

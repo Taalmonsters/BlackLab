@@ -35,16 +35,15 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import nl.inl.blacklab.index.complex.ComplexFieldUtil;
+import nl.inl.util.ExUtil;
+
 import org.apache.log4j.Logger;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.index.SlowCompositeReaderWrapper;
 import org.apache.lucene.uninverting.UninvertingReader;
-
-import nl.inl.blacklab.index.complex.ComplexFieldUtil;
-import nl.inl.util.ExUtil;
-import nl.inl.util.VersionFile;
 
 /**
  * Keeps a forward index of documents, to quickly answer the question
@@ -91,8 +90,6 @@ class ForwardIndexImplV3 extends ForwardIndex {
 
 	/** The number of integer positions to reserve when mapping the file for writing. */
 	final static int WRITE_MAP_RESERVE = 250000; // 250K integers = 1M bytes
-
-	private static final String THIS_VERSION = "3";
 
 	/** The memory mapped write buffer */
 	private IntBuffer writeBuffer;
@@ -152,13 +149,16 @@ class ForwardIndexImplV3 extends ForwardIndex {
 
 	private UninvertingReader uninv;
 
+	/** If true, we use the new, block-based terms file, that can grow larger than 2 GB. */
+	private boolean useBlockBasedTermsFile = true;
+
 	@Override
 	public void setIdTranslateInfo(DirectoryReader reader, String lucenePropFieldName) {
 		this.reader = reader;
 		this.fiidFieldName = ComplexFieldUtil.forwardIndexIdField(lucenePropFieldName);
 		try {
 			LeafReader srw = SlowCompositeReaderWrapper.wrap(reader);
-			Map<String, UninvertingReader.Type> fields = new HashMap<String, UninvertingReader.Type>();
+			Map<String, UninvertingReader.Type> fields = new HashMap<>();
 			fields.put(fiidFieldName, UninvertingReader.Type.INTEGER);
 			uninv = new UninvertingReader(srw, fields);
 			cachedFiids = uninv.getNumericDocValues(fiidFieldName);
@@ -196,25 +196,14 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		}
 	}
 
-	public ForwardIndexImplV3(File dir, boolean indexMode, Collator collator, boolean create) {
+	protected ForwardIndexImplV3(File dir, boolean indexMode, Collator collator, boolean create) {
 		if (!dir.exists()) {
 			if (!create)
 				throw new RuntimeException("ForwardIndex doesn't exist: " + dir);
 			dir.mkdir();
 		}
 
-		// Version check
 		this.indexMode = indexMode;
-		if (!indexMode || !create) {
-			// We're opening an existing forward index. Check version.
-			if (!VersionFile.isTypeVersion(dir, "fi", THIS_VERSION)) {
-				throw new RuntimeException("Not a forward index or wrong version: "
-						+ VersionFile.report(dir) + " (fi " + THIS_VERSION + " expected)");
-			}
-		} else {
-			// We're creating a forward index. Write version.
-			VersionFile.write(dir, "fi", THIS_VERSION);
-		}
 
 		termsFile = new File(dir, "terms.dat");
 		tocFile = new File(dir, "docs.dat");
@@ -227,8 +216,8 @@ class ForwardIndexImplV3 extends ForwardIndex {
 			if (termsFile.exists())
 				termsFile.delete();
 		}
-		toc = new ArrayList<TocEntry>();
-		deletedTocEntries = new ArrayList<TocEntry>();
+		toc = new ArrayList<>();
+		deletedTocEntries = new ArrayList<>();
 		try {
 			boolean existing = false;
 			if (tocFile.exists()) {
@@ -242,6 +231,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 				tokensFileChunks = null;
 				tocModified = true;
 			}
+			terms.setBlockBasedFile(useBlockBasedTermsFile);
 			openTokensFile();
 
 			// Tricks to speed up reading
@@ -279,8 +269,8 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		// document start, documents of up to 2G tokens can be processed. We could get around
 		// this limitation by reading from multiple chunks, but this would make the code
 		// more complex.
-		tokensFileChunks = new ArrayList<ByteBuffer>();
-		tokensFileChunkOffsetBytes = new ArrayList<Long>();
+		tokensFileChunks = new ArrayList<>();
+		tokensFileChunkOffsetBytes = new ArrayList<>();
 		long mappedBytes = 0;
 		long tokenFileEndBytes = tokenFileEndPosition * SIZEOF_INT;
 		while (mappedBytes < tokenFileEndBytes) {
@@ -630,11 +620,6 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		}
 	}
 
-	@Override
-	public synchronized int addDocument(List<String> content) {
-		return addDocument(content, null);
-	}
-
 	@Deprecated
 	@Override
 	public synchronized List<String[]> retrieveParts(int fiid, int[] start, int[] end) {
@@ -643,7 +628,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		List<int[]> resultInt = retrievePartsInt(fiid, start, end);
 
 		// Translate them to strings using the terms index
-		List<String[]> result = new ArrayList<String[]>(resultInt.size());
+		List<String[]> result = new ArrayList<>(resultInt.size());
 		for (int[] snippetInt: resultInt) {
 			String[] snippet = new String[snippetInt.length];
 			for (int j = 0; j < snippetInt.length; j++) {
@@ -679,7 +664,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 			int n = start.length;
 			if (n != end.length)
 				throw new RuntimeException("start and end must be of equal length");
-			List<int[]> result = new ArrayList<int[]>(n);
+			List<int[]> result = new ArrayList<>(n);
 
 			for (int i = 0; i < n; i++) {
 				if (start[i] == -1)
@@ -872,6 +857,11 @@ class ForwardIndexImplV3 extends ForwardIndex {
 	@Override
 	public long getTotalSize() {
 		return tokenFileEndPosition;
+	}
+
+	@Override
+	protected void setLargeTermsFileSupport(boolean b) {
+		this.useBlockBasedTermsFile = b;
 	}
 
 }

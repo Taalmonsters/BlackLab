@@ -32,6 +32,7 @@ import nl.inl.util.ThreadPriority.Level;
 
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.search.DocIdSetIterator;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.Scorer;
@@ -46,7 +47,7 @@ public class DocResults implements Iterable<DocResult> {
 	/**
 	 * (Part of) our document results
 	 */
-	protected List<DocResult> results = new ArrayList<DocResult>();
+	protected List<DocResult> results = new ArrayList<>();
 
 	/**
 	 * Our searcher object
@@ -203,10 +204,20 @@ public class DocResults implements Iterable<DocResult> {
 //		}
 
 		searcher.collectDocuments(query, new SimpleCollector() {
+
+			private int docBase;
+
+			@Override
+			protected void doSetNextReader(LeafReaderContext context)
+					throws IOException {
+				docBase = context.docBase;
+				super.doSetNextReader(context);
+			}
+
 			@Override
 			public void collect(int docId) throws IOException {
-				int globalDocId = docId;
-				results.add(new DocResult(DocResults.this.searcher, null, globalDocId, DocResults.this.searcher.document(docId)));
+				int globalDocId = docId + docBase;
+				results.add(new DocResult(DocResults.this.searcher, null, globalDocId, DocResults.this.searcher.document(globalDocId)));
 			}
 
 			@Override
@@ -325,7 +336,7 @@ public class DocResults implements Iterable<DocResult> {
 	public void sort(DocProperty prop, boolean sortReverse) {
 		Comparator<DocResult> comparator = new ComparatorDocProperty(prop);
 		if (sortReverse) {
-			comparator = new ReverseComparator<DocResult>(comparator);
+			comparator = new ReverseComparator<>(comparator);
 		}
 		sort(comparator);
 	}
@@ -387,7 +398,7 @@ public class DocResults implements Iterable<DocResult> {
 							addDocResultToList(doc, hits, indexReader);
 						}
 						doc = hit.doc;
-						docHits = new ArrayList<Hit>();
+						docHits = new ArrayList<>();
 					}
 					docHits.add(hit);
 				}

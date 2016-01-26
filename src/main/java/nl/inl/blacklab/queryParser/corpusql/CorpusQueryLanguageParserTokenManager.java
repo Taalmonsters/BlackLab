@@ -2,6 +2,7 @@
 package nl.inl.blacklab.queryParser.corpusql;
 
 @SuppressWarnings("all")
+
 public class CorpusQueryLanguageParserTokenManager implements CorpusQueryLanguageParserConstants
 {
   public  java.io.PrintStream debugStream = System.out;
