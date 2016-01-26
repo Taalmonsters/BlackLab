@@ -78,7 +78,7 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 		final ComplexFieldProperty propPartOfSpeech = addProperty("pos");
 		final ComplexFieldProperty propPosHead = addProperty("poshead");
 		final ComplexFieldProperty propPhonetic = addProperty("phonetic");
-//		final ComplexFieldProperty propXmlid = addProperty("xmlid");
+		final ComplexFieldProperty propXmlid = addProperty("xmlid");
 		final ComplexFieldProperty propSenStart = addProperty("sentence_start");
 		final ComplexFieldProperty propParStart = addProperty("paragraph_start");
 		final ComplexFieldProperty propSpeaker = addProperty("sentence_speaker");
@@ -135,7 +135,7 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 				if (wordform.length() > 0) {
 
 					propMain.addValue(wordform);
-//					propXmlid.addValue(xmlid);
+					propXmlid.addValue(xmlid);
 					propPartOfSpeech.addValue(pos);
 					String posHead = pos.split("\\(")[0];
 					if (posHead.length() > 0)
