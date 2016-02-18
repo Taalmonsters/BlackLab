@@ -16,6 +16,8 @@
 package nl.inl.blacklab.indexers;
 
 import java.io.Reader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.xml.sax.Attributes;
 
@@ -43,6 +45,12 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 	String phonetic;
 	
 	String speaker;
+	
+	String beginTime;
+	
+	String endTime;
+	
+	List<String> ids;
 	
 	boolean sentenceStart = true;
 	
@@ -82,6 +90,8 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 		final ComplexFieldProperty propSenStart = addProperty("sentence_start");
 		final ComplexFieldProperty propParStart = addProperty("paragraph_start");
 		final ComplexFieldProperty propSpeaker = addProperty("sentence_speaker");
+		final ComplexFieldProperty propBeginTime = addProperty("begin_time");
+		final ComplexFieldProperty propEndTime = addProperty("end_time");
 
 		// Doc element: the individual documents to index
 		addHandler("/FoLiA", new DocumentElementHandler());
@@ -136,10 +146,13 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 
 					propMain.addValue(wordform);
 					propXmlid.addValue(xmlid);
+					ids.add(xmlid);
 					propPartOfSpeech.addValue(pos);
 					String posHead = pos.split("\\(")[0];
 					if (posHead.length() > 0)
 						propPosHead.addValue(posHead);
+					else
+						propPosHead.addValue("");
 					propLemma.addValue(lemma);
 					
 					if (pos.length() == 0 || lemma.length() == 0) {
@@ -153,6 +166,8 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					
 					if (numPhonAnnotations > 0)
 						propPhonetic.addValue(phonetic);
+					else
+						propPhonetic.addValue("");
 					
 					if (paragraphStart) {
 						propParStart.addValue("true");
@@ -168,8 +183,12 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					
 					if (speaker != null)
 						propSpeaker.addValue(speaker);
-					
+					else
+						propSpeaker.addValue("");
+
 					propPunct.addValue(" ");
+				} else {
+					ids.add("");
 				}
 			}
 		});
@@ -229,6 +248,40 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 			}
 		});
 
+		addHandler("timesegment", new ContentCapturingHandler() {
+			@Override
+			public void startElement(String uri, String localName, String qName,
+					Attributes attributes) {
+				super.startElement(uri, localName, qName, attributes);
+				beginTime = attributes.getValue("begintime");
+				endTime = attributes.getValue("endtime");
+			}
+
+			@Override
+			public void endElement(String uri, String localName, String qName) {
+				super.endElement(uri, localName, qName);
+				beginTime = null;
+				endTime = null;
+			}
+		});
+
+		addHandler("timesegment/wref", new ContentCapturingHandler() {
+			@Override
+			public void startElement(String uri, String localName, String qName,
+					Attributes attributes) {
+				super.startElement(uri, localName, qName, attributes);
+				String wref = attributes.getValue("id");
+				String wid = ids.remove(0);
+				while (!wid.equals(wref)) {
+					propBeginTime.addValue("", 1);
+					propEndTime.addValue("", 1);
+					wid = ids.remove(0);
+				}
+				propBeginTime.addValue(beginTime, 1);
+				propEndTime.addValue(endTime, 1);
+			}
+		});
+
 		// t (token) element directly under w (word) element: contains the word form
 		addHandler("w/t", new ContentCapturingHandler() {
 
@@ -258,11 +311,17 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					Attributes attributes) {
 				sentenceStart = true;
 				speaker = attributes.getValue("speaker");
+				ids = new ArrayList<String>();
 			}
 
 			@Override
 			public void endElement(String uri, String localName, String qName) {
 				speaker = null;
+				while (ids.size() > 0) {
+					ids.remove(0);
+					propBeginTime.addValue("");
+					propEndTime.addValue("");
+				}
 			}
 		});
 
