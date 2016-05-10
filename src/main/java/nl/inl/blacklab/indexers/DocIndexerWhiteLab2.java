@@ -51,10 +51,6 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 	String endTime;
 	
 	List<String> ids;
-	
-	boolean sentenceStart = true;
-	
-	boolean paragraphStart = true;
 
 	boolean lemPosProblemReported = false;
 	
@@ -84,12 +80,9 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 		// Add some extra properties
 		final ComplexFieldProperty propLemma = addProperty("lemma");
 		final ComplexFieldProperty propPartOfSpeech = addProperty("pos");
-		final ComplexFieldProperty propPosHead = addProperty("poshead");
 		final ComplexFieldProperty propPhonetic = addProperty("phonetic");
 		final ComplexFieldProperty propXmlid = addProperty("xmlid");
-		final ComplexFieldProperty propSenStart = addProperty("sentence_start");
-		final ComplexFieldProperty propParStart = addProperty("paragraph_start");
-		final ComplexFieldProperty propSpeaker = addProperty("sentence_speaker");
+		final ComplexFieldProperty propSpeaker = addProperty("speaker");
 		final ComplexFieldProperty propBeginTime = addProperty("begin_time");
 		final ComplexFieldProperty propEndTime = addProperty("end_time");
 
@@ -145,14 +138,9 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 				if (wordform.length() > 0) {
 
 					propMain.addValue(wordform);
-					propXmlid.addValue(xmlid);
+					propXmlid.addValue(xmlid.split("\\.", 2)[1]);
 					ids.add(xmlid);
 					propPartOfSpeech.addValue(pos);
-					String posHead = pos.split("\\(")[0];
-					if (posHead.length() > 0)
-						propPosHead.addValue(posHead);
-					else
-						propPosHead.addValue("");
 					propLemma.addValue(lemma);
 					
 					if (pos.length() == 0 || lemma.length() == 0) {
@@ -168,18 +156,6 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 						propPhonetic.addValue(phonetic);
 					else
 						propPhonetic.addValue("");
-					
-					if (paragraphStart) {
-						propParStart.addValue("true");
-						paragraphStart = false;
-					} else
-						propParStart.addValue("false");
-					
-					if (sentenceStart) {
-						propSenStart.addValue("true");
-						sentenceStart = false;
-					} else
-						propSenStart.addValue("false");
 					
 					if (speaker != null)
 						propSpeaker.addValue(speaker);
@@ -309,7 +285,6 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 			@Override
 			public void startElement(String uri, String localName, String qName,
 					Attributes attributes) {
-				sentenceStart = true;
 				speaker = attributes.getValue("speaker");
 				ids = new ArrayList<String>();
 			}
@@ -322,24 +297,6 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					propBeginTime.addValue("");
 					propEndTime.addValue("");
 				}
-			}
-		});
-
-		// Paragraph tags: index as tags in the content
-		addHandler("p", new ElementHandler() {
-			@Override
-			public void startElement(String uri, String localName, String qName,
-					Attributes attributes) {
-				paragraphStart = true;
-			}
-		});
-
-		// <event/> tags: index as tags in the content
-		addHandler("event", new ElementHandler() {
-			@Override
-			public void startElement(String uri, String localName, String qName,
-					Attributes attributes) {
-				paragraphStart = true;
 			}
 		});
 
