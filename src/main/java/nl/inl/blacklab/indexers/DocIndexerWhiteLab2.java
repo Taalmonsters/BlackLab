@@ -281,7 +281,7 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 		});
 
 		// Sentence tags: index as tags in the content
-		addHandler("s", new ElementHandler() {
+		addHandler("s", new InlineTagHandler() {
 			@Override
 			public void startElement(String uri, String localName, String qName,
 					Attributes attributes) {
@@ -299,6 +299,12 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 				}
 			}
 		});
+
+		// Paragraph tags: index as tags in the content
+		addHandler("p", new InlineTagHandler());
+
+		// <event/> tags: index as tags in the content
+		addHandler("event", new InlineTagHandler());
 
 		// meta elements: metadata fields
 		// [NOT USED FOR OPENSONAR..?]
