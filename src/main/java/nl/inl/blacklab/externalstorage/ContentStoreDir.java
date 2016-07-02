@@ -36,7 +36,9 @@ import nl.inl.util.ExUtil;
 /**
  * Store string content by id in a directory of compound files with a TOC file. Quickly retrieve
  * (parts of) the string content.
+ * @deprecated use ContentStoreDirZip
  */
+@Deprecated
 public class ContentStoreDir extends ContentStoreDirAbstract {
 	private static final String CHAR_ENCODING = "UTF-16LE";
 
@@ -136,7 +138,9 @@ public class ContentStoreDir extends ContentStoreDirAbstract {
 
 	/**
 	 * @param dir directory to use for the content store
+	 * @deprecated use ContentStoreDirZip
 	 */
+	@Deprecated
 	public ContentStoreDir(File dir) {
 		this(dir, false);
 	}
@@ -144,7 +148,9 @@ public class ContentStoreDir extends ContentStoreDirAbstract {
 	/**
 	 * @param dir directory to use for the content store
 	 * @param create if true, create a new content store. Otherwise append to the existing one
+	 * @deprecated use ContentStoreDirZip
 	 */
+	@Deprecated
 	public ContentStoreDir(File dir, boolean create) {
 		this.dir = dir;
 		if (!dir.exists())
@@ -181,29 +187,24 @@ public class ContentStoreDir extends ContentStoreDirAbstract {
 	 * Read the table of contents from the file
 	 */
 	private void readToc() {
-		try {
-			BufferedReader f = new BufferedReader(new InputStreamReader(new FileInputStream(tocFile), "utf-8"));
-			try {
-				while (true) {
-					String line = f.readLine();
-					if (line == null)
-						break;
-					TocEntry e = TocEntry.deserialize(line);
-					toc.put(e.id, e);
-					if (e.fileId > currentFileId) {
-						currentFileId = e.fileId;
-						currentFileLength = 0;
-					}
-					if (e.fileId == currentFileId) {
-						long endOfEntry = e.offset + e.length;
-						if (endOfEntry > currentFileLength)
-							currentFileLength = endOfEntry;
-					}
-					if (e.id + 1 > nextId)
-						nextId = e.id + 1;
+		try (BufferedReader f = new BufferedReader(new InputStreamReader(new FileInputStream(tocFile), "utf-8"))) {
+			while (true) {
+				String line = f.readLine();
+				if (line == null)
+					break;
+				TocEntry e = TocEntry.deserialize(line);
+				toc.put(e.id, e);
+				if (e.fileId > currentFileId) {
+					currentFileId = e.fileId;
+					currentFileLength = 0;
 				}
-			} finally {
-				f.close();
+				if (e.fileId == currentFileId) {
+					long endOfEntry = e.offset + e.length;
+					if (endOfEntry > currentFileLength)
+						currentFileLength = endOfEntry;
+				}
+				if (e.id + 1 > nextId)
+					nextId = e.id + 1;
 			}
 		} catch (Exception e) {
 			throw ExUtil.wrapRuntimeException(e);
@@ -215,14 +216,9 @@ public class ContentStoreDir extends ContentStoreDirAbstract {
 	 */
 	@Override
 	public void close() {
-		try {
-			PrintWriter f = new PrintWriter(new OutputStreamWriter(new FileOutputStream(tocFile), "utf-8"));
-			try {
-				for (Map.Entry<Integer, TocEntry> e : toc.entrySet()) {
-					f.println(e.getValue().serialize());
-				}
-			} finally {
-				f.close();
+		try (PrintWriter f = new PrintWriter(new OutputStreamWriter(new FileOutputStream(tocFile), "utf-8"))) {
+			for (Map.Entry<Integer, TocEntry> e : toc.entrySet()) {
+				f.println(e.getValue().serialize());
 			}
 		} catch (Exception e) {
 			throw ExUtil.wrapRuntimeException(e);

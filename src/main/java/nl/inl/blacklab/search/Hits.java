@@ -1566,7 +1566,7 @@ public class Hits extends AbstractList<Hit> {
 			hitsInSameDoc.add(hit);
 			index++;
 		}
-		if (hitsInSameDoc.size() > 0)
+		if (!hitsInSameDoc.isEmpty())
 			findPartOfContext(hitsInSameDoc, index - hitsInSameDoc.size(), fis);
 
 		currentContextSize = desiredContextSize;
@@ -1899,12 +1899,12 @@ public class Hits extends AbstractList<Hit> {
 	synchronized void makeKwicsSingleDocForwardIndex(ForwardIndex forwardIndex,
 			ForwardIndex punctForwardIndex, Map<String, ForwardIndex> attrForwardIndices,
 			int wordsAroundHit, Map<Hit, Kwic> kwics) {
-		if (hits.size() == 0)
+		if (hits.isEmpty())
 			return;
 
 		// Save existing context so we can restore it afterwards
 		int[][] oldContexts = null;
-		if (hits.size() > 0 && contexts != null)
+		if (!hits.isEmpty() && contexts != null)
 			oldContexts = saveContexts();
 
 		// TODO: more efficient to get all contexts with one getContextWords() call!
@@ -1919,13 +1919,12 @@ public class Hits extends AbstractList<Hit> {
 
 		// Get attributes context
 		String[] attrName = null;
-		ForwardIndex[] attrFI = null;
 		Terms[] attrTerms = null;
 		int[][][] attrContext = null;
 		if (attrForwardIndices != null) {
 			int n = attrForwardIndices.size();
 			attrName = new String[n];
-			attrFI = new ForwardIndex[n];
+			ForwardIndex[] attrFI = new ForwardIndex[n];
 			attrTerms = new Terms[n];
 			attrContext = new int[n][][];
 			int i = 0;
@@ -2108,7 +2107,7 @@ public class Hits extends AbstractList<Hit> {
 	 */
 	private synchronized void makeConcordancesSingleDocContentStore(String fieldName, int wordsAroundHit, Map<Hit, Concordance> conc,
 			XmlHighlighter hl) {
-		if (hits.size() == 0)
+		if (hits.isEmpty())
 			return;
 		int doc = hits.get(0).doc;
 		int arrayLength = hits.size() * 2;

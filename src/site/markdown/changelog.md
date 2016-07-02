@@ -2,6 +2,38 @@
 
 ## Improvements in HEAD
 
+## Improvements up to v1.3.4
+
+### Fixed
+* Lone carriage return characters in JSON output were not escaped;
+  Windows line endings were escaped as a single \\n.
+
+## Improvements up to v1.3.3
+
+### Fixed
+* Indices with old terms file format (pre-1.3) produced empty concordances.
+
+## Improvements up to v1.3.2
+
+### Fixed
+* Query rewrite bug when combining identical clauses with different repetitions,
+  i.e. \[pos="AA.*"\]\[pos="AA.*"\]* --> \[pos="AA.*"\]+
+* Throw a descriptive error if an index contains no fields.
+
+### Changed
+* Some small code quality improvements, like using .isEmpty() instead of .size() == 0.
+* Added -javadoc and -sources JARs to Maven build, in preparation for publishing to Maven Central.
+* Added distributionManagement section for deploying to OSSRH staging area. 
+
+## Improvements up to v1.3.1
+
+### Fixed
+* Bug in SpanQueryAnd which caused incorrect hits to be reported.
+
+## Changed
+* Special OSX and Windows files are skipped, even if they occur inside archives.
+* Added new default content store format "fixedblock", that improves space re-use when updating documents. 
+
 ## Improvements up to v1.3
 
 ### Added

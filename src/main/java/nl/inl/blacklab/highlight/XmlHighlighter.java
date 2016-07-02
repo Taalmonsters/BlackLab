@@ -34,12 +34,12 @@ public class XmlHighlighter {
 	 * an open tag at the beginning for an unmatched closing tag,
 	 * or by removing the unmatched closing tag.
 	 */
-	public static enum UnbalancedTagsStrategy {
+	public enum UnbalancedTagsStrategy {
 		ADD_TAG,
 		REMOVE_TAG
 	}
 
-	static enum TagType {
+	enum TagType {
 		EXISTING_TAG,       // an existing tag
 		HIGHLIGHT_START,    // insert <hl> tag here
 		HIGHLIGHT_END,      // insert </hl> tag here
@@ -370,7 +370,7 @@ public class XmlHighlighter {
 			} else {
 				// Close tag. Did we encounter a matching open tag?
 				TagLocation openTag = null;
-				if (openTagStack.size() > 0) {
+				if (!openTagStack.isEmpty()) {
 					// Yes, this tag is matched. Find matching tag and link them.
 					openTag = openTagStack.remove(openTagStack.size() - 1);
 					openTag.name = null; // no longer necessary to remember tag name

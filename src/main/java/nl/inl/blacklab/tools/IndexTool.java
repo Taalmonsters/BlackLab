@@ -205,7 +205,7 @@ public class IndexTool {
 		}
 		System.out.println(op + " index in " + indexDir + File.separator + " from " + inputDir + strGlob + " ("
 				+ docFormat + ")");
-		if (indexerParam.size() > 0) {
+		if (!indexerParam.isEmpty()) {
 			System.out.println("Indexer parameters:");
 			for (Map.Entry<String,String> e: indexerParam.entrySet()) {
 				System.out.println("  " + e.getKey() + ": " + e.getValue());
@@ -231,7 +231,7 @@ public class IndexTool {
 		if (!createNewIndex || indexTemplateFile == null || !indexTemplateFile.canRead()) {
 			indexTemplateFile = null;
 		}
-		Indexer indexer = null;
+		Indexer indexer;
 		try {
 			indexer = new Indexer(indexDir, createNewIndex, docIndexerClass, indexTemplateFile);
 		} catch (DocumentFormatException e1) {

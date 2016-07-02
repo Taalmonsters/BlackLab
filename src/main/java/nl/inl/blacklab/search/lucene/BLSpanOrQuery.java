@@ -46,13 +46,13 @@ import nl.inl.blacklab.search.Span;
  *
  * BL-specific version (search for "// BL") that produces a BLSpans.
  */
-@SuppressWarnings({ "javadoc" })
-// BL: suppress some innocent warnings
 public class BLSpanOrQuery extends SpanOrQuery {
 
 	private String field;
 
-	/** Construct a BLSpanOrQuery merging the provided clauses. */
+	/** Construct a BLSpanOrQuery merging the provided clauses.
+	 * @param clauses clauses to combine using OR
+	 */
 	public BLSpanOrQuery(SpanQuery... clauses) {
 		super(clauses);
 		if (clauses.length > 0)
@@ -170,7 +170,7 @@ public class BLSpanOrQuery extends SpanOrQuery {
 				}
 			}
 		}
-		if (subSpans.size() == 0)
+		if (subSpans.isEmpty())
 			return null;
 		else if (subSpans.size() == 1)
 			return BLSpansWrapper.optWrap(subSpans.get(0));
@@ -507,8 +507,8 @@ public class BLSpanOrQuery extends SpanOrQuery {
 	/**
 	 * Convert a SpanOrQuery to a BLSpanOrQuery
 	 *
-	 * @param soq
-	 * @return
+	 * @param soq query to convert
+	 * @return the result
 	 */
 	public static BLSpanOrQuery from(SpanOrQuery soq) {
 		BLSpanOrQuery blsoq = new BLSpanOrQuery(soq.getClauses());

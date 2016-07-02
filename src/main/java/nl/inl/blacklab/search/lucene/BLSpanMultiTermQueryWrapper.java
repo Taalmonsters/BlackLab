@@ -5,7 +5,6 @@ import java.io.IOException;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.TermContext;
-import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.MultiTermQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoringRewrite;
@@ -39,7 +38,7 @@ public class BLSpanMultiTermQueryWrapper<Q extends MultiTermQuery>
 
 	/**
 	 * A rewrite method that first translates each term into a SpanTermQuery in a
-	 * {@link Occur#SHOULD} clause in a BooleanQuery, and keeps the
+	 * Occur#SHOULD clause in a BooleanQuery, and keeps the
 	 * scores as computed by the query.
 	 *
 	 * @see #setRewriteMethod
@@ -80,7 +79,7 @@ public class BLSpanMultiTermQueryWrapper<Q extends MultiTermQuery>
 
 	/**
 	 * A rewrite method that first translates each term into a SpanTermQuery in a
-	 * {@link Occur#SHOULD} clause in a BooleanQuery, and keeps the
+	 * Occur#SHOULD clause in a BooleanQuery, and keeps the
 	 * scores as computed by the query.
 	 *
 	 * <p>

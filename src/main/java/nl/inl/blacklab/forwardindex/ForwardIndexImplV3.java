@@ -196,7 +196,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		}
 	}
 
-	protected ForwardIndexImplV3(File dir, boolean indexMode, Collator collator, boolean create) {
+	protected ForwardIndexImplV3(File dir, boolean indexMode, Collator collator, boolean create, boolean largeTermsFileSupport) {
 		if (!dir.exists()) {
 			if (!create)
 				throw new RuntimeException("ForwardIndex doesn't exist: " + dir);
@@ -219,10 +219,11 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		toc = new ArrayList<>();
 		deletedTocEntries = new ArrayList<>();
 		try {
+			setLargeTermsFileSupport(largeTermsFileSupport);
 			boolean existing = false;
 			if (tocFile.exists()) {
 				readToc();
-				terms = new TermsImplV3(indexMode, collator, termsFile);
+				terms = new TermsImplV3(indexMode, collator, termsFile, useBlockBasedTermsFile);
 				existing = true;
 				tocModified = false;
 			} else {
@@ -230,8 +231,8 @@ class ForwardIndexImplV3 extends ForwardIndex {
 				tokensFile.createNewFile();
 				tokensFileChunks = null;
 				tocModified = true;
+				terms.setBlockBasedFile(useBlockBasedTermsFile);
 			}
-			terms.setBlockBasedFile(useBlockBasedTermsFile);
 			openTokensFile();
 
 			// Tricks to speed up reading
@@ -257,6 +258,10 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		}
 	}
 
+	public ForwardIndexImplV3(File dir, boolean indexMode, Collator collator, boolean create) {
+		this(dir, indexMode, collator, create, true);
+	}
+
 	private void openTokensFile() throws FileNotFoundException {
 		tokensFp = new RandomAccessFile(tokensFile, indexMode ? "rw" : "r");
 		tokensFileChannel = tokensFp.getChannel();
@@ -276,7 +281,6 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		while (mappedBytes < tokenFileEndBytes) {
 			// Find the last TOC entry start point that's also in the previous mapping
 			// (or right the first byte after the previous mapping).
-			long startOfNextMappingBytes = 0;
 
 			// Look for the largest entryOffset that's no larger than mappedBytes.
 			TocEntry mapNextChunkFrom = null;
@@ -296,7 +300,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 					max = middle;
 				}
 			}
-			startOfNextMappingBytes = toc.get(min).offset * SIZEOF_INT;
+			long startOfNextMappingBytes = toc.get(min).offset * SIZEOF_INT;
 
 			// Map this chunk
 			long sizeBytes = tokenFileEndBytes - startOfNextMappingBytes;
@@ -350,41 +354,32 @@ class ForwardIndexImplV3 extends ForwardIndex {
 	private void readToc() {
 		toc.clear();
 		deletedTocEntries.clear();
-		try {
-			RandomAccessFile raf = new RandomAccessFile(tocFile, "r");
+		try (RandomAccessFile raf = new RandomAccessFile(tocFile, "r");
+			FileChannel fc = raf.getChannel()) {
 			long fileSize = tocFile.length();
-			try {
-				FileChannel fc = raf.getChannel();
-				try {
-					MappedByteBuffer buf = fc.map(MapMode.READ_ONLY, 0, fileSize);
-					int n = buf.getInt();
-					long[] offset = new long[n];
-					int[] length = new int[n];
-					byte[] deleted = new byte[n];
-					LongBuffer lb = buf.asLongBuffer();
-					lb.get(offset);
-					buf.position(buf.position() + SIZEOF_LONG * n);
-					IntBuffer ib = buf.asIntBuffer();
-					ib.get(length);
-					buf.position(buf.position() + SIZEOF_INT * n);
-					buf.get(deleted);
-					for (int i = 0; i < n; i++) {
-						TocEntry e = new TocEntry(offset[i], length[i], deleted[i] != 0);
-						toc.add(e);
-						if (e.deleted) {
-							deletedTocEntries.add(e);
-						}
-						long end = e.offset + e.length;
-						if (end > tokenFileEndPosition)
-							tokenFileEndPosition = end;
-					}
-					sortDeletedTocEntries();
-				} finally {
-					fc.close();
+			MappedByteBuffer buf = fc.map(MapMode.READ_ONLY, 0, fileSize);
+			int n = buf.getInt();
+			long[] offset = new long[n];
+			int[] length = new int[n];
+			byte[] deleted = new byte[n];
+			LongBuffer lb = buf.asLongBuffer();
+			lb.get(offset);
+			buf.position(buf.position() + SIZEOF_LONG * n);
+			IntBuffer ib = buf.asIntBuffer();
+			ib.get(length);
+			buf.position(buf.position() + SIZEOF_INT * n);
+			buf.get(deleted);
+			for (int i = 0; i < n; i++) {
+				TocEntry e = new TocEntry(offset[i], length[i], deleted[i] != 0);
+				toc.add(e);
+				if (e.deleted) {
+					deletedTocEntries.add(e);
 				}
-			} finally {
-				raf.close();
+				long end = e.offset + e.length;
+				if (end > tokenFileEndPosition)
+					tokenFileEndPosition = end;
 			}
+			sortDeletedTocEntries();
 		} catch (Exception e) {
 			throw ExUtil.wrapRuntimeException(e);
 		}
@@ -552,7 +547,7 @@ class ForwardIndexImplV3 extends ForwardIndex {
 		// (always, unless we found an exact-fitting gap)
 		if (addNewEntry) {
 			// See if there's an unused entry
-			TocEntry smallestFreeEntry = deletedTocEntries.size() == 0 ? null : deletedTocEntries.get(0);
+			TocEntry smallestFreeEntry = deletedTocEntries.isEmpty() ? null : deletedTocEntries.get(0);
 			if (smallestFreeEntry != null && smallestFreeEntry.length == 0) {
 				// Yes; re-use
 				deletedTocEntries.remove(0);

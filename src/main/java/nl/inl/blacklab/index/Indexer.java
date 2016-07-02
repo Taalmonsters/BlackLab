@@ -491,7 +491,7 @@ public class Indexer {
 	}
 
 	/**
-	 * Index a document from a Reader, using the specified type of DocIndexer
+	 * Index a document from a Reader.
 	 *
 	 * Catches and reports any errors that occur.
 	 *
@@ -628,7 +628,7 @@ public class Indexer {
 			if (fn.endsWith(".zip")) {
 				indexZip(fileToIndex, glob, recurseSubdirs);
 			} else {
-				if (!isSpecialOperatingSystemFile(fileToIndex)) { // skip special OS files
+				if (!isSpecialOperatingSystemFile(fileToIndex.getName())) { // skip special OS files
 					try {
 						FileInputStream is = new FileInputStream(fileToIndex);
 						try {
@@ -636,7 +636,7 @@ public class Indexer {
 						} finally {
 							is.close();
 						}
-					} catch (IOException e) {
+					} catch (RuntimeException | IOException e) {
 						log("*** Error indexing " + fileToIndex, e);
 						terminateIndexing = !getListener().errorOccurred(e.getMessage(), "file", fileToIndex, null);
 					}
@@ -646,7 +646,20 @@ public class Indexer {
 	}
 
 	/**
-	 * Index from an InputStream
+	 * Index a document from an InputStream.
+	 *
+	 * @param documentName
+	 *            name for the InputStream (e.g. name of the file)
+	 * @param input
+	 *            the stream
+	 * @throws Exception
+	 */
+	public void index(String documentName, InputStream input) throws Exception {
+		indexReader(documentName, new BufferedReader(new UnicodeReader(input, "utf-8")));
+	}
+
+	/**
+	 * Index from an InputStream, which may be an archive.
 	 *
 	 * @param name
 	 *            name for the InputStream (e.g. name of the file)
@@ -738,7 +751,8 @@ public class Indexer {
 					String fileName = e.getName();
 					Matcher m = pattGlob.matcher(fileName);
 					boolean isArchive = fileName.endsWith(".zip") || fileName.endsWith(".gz") || fileName.endsWith(".tgz");
-					if (m.matches() || isArchive) {
+					boolean skipFile = isSpecialOperatingSystemFile(fileName);
+					if (!skipFile && (m.matches() || isArchive)) {
 						try {
 							InputStream is = z.getInputStream(e);
 							try {
@@ -751,7 +765,7 @@ public class Indexer {
 							} finally {
 								is.close();
 							}
-						} catch (ZipException ex) {
+						} catch (RuntimeException | ZipException ex) {
 							log("*** Error indexing " + fileName + " from " + zipFile, ex);
 							terminateIndexing = !getListener().errorOccurred(ex.getMessage(), "zip", zipFile, new File(fileName));
 						}
@@ -769,20 +783,18 @@ public class Indexer {
 	}
 
 	public void indexGzip(final String gzFileName, InputStream gzipStream) {
-//		if (!TarGzipReader.canProcessTarGzip()) {
-//			// Apache commons-compress not found, skip file
-//			terminateIndexing = !getListener().errorOccurred("Cannot index .gz, Apache common-compress not on classpath", "tgz", new File(gzFileName), null);
-//			//logger.warn("Skipping " + tgzFileName + ", Apache common-compress not found on classpath!");
-//			return;
-//		}
 		TarGzipReader.processGzip(gzFileName, gzipStream, new FileHandler() {
 			@Override
 			public boolean handle(String filePath, InputStream contents) {
-				try {
-					indexInputStream(filePath, contents, "*", false);
-				} catch (Exception e) {
-					log("*** Error indexing .gz file: " + filePath, e);
-					terminateIndexing = !getListener().errorOccurred(e.getMessage(), "gz", new File(filePath), new File(filePath));
+				int i = filePath.lastIndexOf("/");
+				String fileName = i < 0 ? filePath : filePath.substring(i + 1);
+				if (!isSpecialOperatingSystemFile(fileName)) {
+					try {
+						indexInputStream(filePath, contents, "*", false);
+					} catch (Exception e) {
+						log("*** Error indexing .gz file: " + filePath, e);
+						terminateIndexing = !getListener().errorOccurred(e.getMessage(), "gz", new File(filePath), new File(filePath));
+					}
 				}
 				return continueIndexing();
 			}
@@ -790,34 +802,30 @@ public class Indexer {
 	}
 
 	public void indexTarGzip(final String tgzFileName, InputStream tarGzipStream, final String glob, final boolean recurseArchives) {
-//		if (!TarGzipReader.canProcessTarGzip()) {
-//			// Apache commons-compress not found, skip file
-//			terminateIndexing = !getListener().errorOccurred("Cannot index .tar.gz, Apache common-compress not on classpath", "tgz", new File(tgzFileName), null);
-//			//logger.warn("Skipping " + tgzFileName + ", Apache common-compress not found on classpath!");
-//			return;
-//		}
 		final Pattern pattGlob = Pattern.compile(FileUtil.globToRegex(glob));
 		TarGzipReader.processTarGzip(tarGzipStream, new FileHandler() {
 			@Override
 			public boolean handle(String filePath, InputStream contents) {
-				try {
-					File f = new File(filePath);
-					String fn = f.getName();
-					Matcher m = pattGlob.matcher(fn);
-					if (m.matches()) {
-						String entryName = tgzFileName + File.separator + filePath;
-						indexInputStream(entryName, contents, glob, recurseArchives);
-					} else {
-						boolean isArchive = fn.endsWith(".zip") || fn.endsWith(".gz") || fn.endsWith(".tgz");
-						if (isArchive) {
-							if (recurseArchives && processArchivesAsDirectories) {
+				int i = filePath.lastIndexOf("/");
+				String fileName = i < 0 ? filePath : filePath.substring(i + 1);
+				if (!isSpecialOperatingSystemFile(fileName)) {
+					try {
+						File f = new File(filePath);
+						String fn = f.getName();
+						Matcher m = pattGlob.matcher(fn);
+						if (m.matches()) {
+							String entryName = tgzFileName + File.separator + filePath;
+							indexInputStream(entryName, contents, glob, recurseArchives);
+						} else {
+							boolean isArchive = fn.endsWith(".zip") || fn.endsWith(".gz") || fn.endsWith(".tgz");
+							if (isArchive && recurseArchives && processArchivesAsDirectories) {
 								indexInputStream(tgzFileName + File.pathSeparator + filePath, contents, glob, recurseArchives);
 							}
 						}
+					} catch (Exception e) {
+						log("*** Error indexing tgz file: " + tgzFileName, e);
+						terminateIndexing = !getListener().errorOccurred(e.getMessage(), "tgz", new File(tgzFileName), new File(filePath));
 					}
-				} catch (Exception e) {
-					log("*** Error indexing tgz file: " + tgzFileName, e);
-					terminateIndexing = !getListener().errorOccurred(e.getMessage(), "tgz", new File(tgzFileName), new File(filePath));
 				}
 				return continueIndexing();
 			}
@@ -827,12 +835,13 @@ public class Indexer {
 	/**
 	 * Should we skip the specified file because it is a special OS file?
 	 *
-	 * @param file
-	 *            the file
+	 * Skips Windows Thumbs.db file and Mac OSX .DS_Store file.
+	 *
+	 * @param fileName name of the file
 	 * @return true if we should skip it, false otherwise
 	 */
-	protected boolean isSpecialOperatingSystemFile(File file) {
-		return file.getName().equals("Thumbs.db");
+	protected boolean isSpecialOperatingSystemFile(String fileName) {
+		return fileName.equals("Thumbs.db") || fileName.equals(".DS_Store");
 	}
 
 	/**

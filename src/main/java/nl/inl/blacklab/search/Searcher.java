@@ -42,8 +42,8 @@ import nl.inl.blacklab.analysis.BLStandardAnalyzer;
 import nl.inl.blacklab.analysis.BLWhitespaceAnalyzer;
 import nl.inl.blacklab.externalstorage.ContentAccessorContentStore;
 import nl.inl.blacklab.externalstorage.ContentStore;
-import nl.inl.blacklab.externalstorage.ContentStoreDir;
 import nl.inl.blacklab.externalstorage.ContentStoreDirAbstract;
+import nl.inl.blacklab.externalstorage.ContentStoreDirFixedBlock;
 import nl.inl.blacklab.externalstorage.ContentStoreDirUtf8;
 import nl.inl.blacklab.externalstorage.ContentStoreDirZip;
 import nl.inl.blacklab.forwardindex.ForwardIndex;
@@ -909,13 +909,11 @@ public class Searcher implements Closeable {
 
 				// Iterate over docs containing this term (NOTE: should be only one doc!)
 				while (dpe.nextDoc() != DocIdSetIterator.NO_MORE_DOCS) {
-					int position = -1;
-
 					// Iterate over positions of this term in this doc
 					int positionsRead = 0;
 					int numberOfPositions = dpe.freq();
 					while (positionsRead < numberOfPositions) {
-						position = dpe.nextPosition();
+						int position = dpe.nextPosition();
 						if (position == -1)
 							break;
 						positionsRead++;
@@ -1351,7 +1349,7 @@ public class Searcher implements Closeable {
 		ContentAccessor ca = contentAccessors.get(fieldName);
 		if (indexMode && ca == null) {
 			// Index mode. Create new content store.
-			ContentStore contentStore = new ContentStoreDirZip(new File(indexLocation, "cs_"
+			ContentStore contentStore = new ContentStoreDirFixedBlock(new File(indexLocation, "cs_"
 					+ fieldName), isEmptyIndex);
 			registerContentStore(fieldName, contentStore);
 			return contentStore;
@@ -1635,17 +1633,20 @@ public class Searcher implements Closeable {
 	public ContentStore openContentStore(File indexXmlDir, boolean create) {
 		String type;
 		if (create)
-			type = "utf8zip";
+			type = "fixedblock";
 		else {
 			VersionFile vf = ContentStoreDirAbstract.getStoreTypeVersion(indexXmlDir);
 			type = vf.getType();
 		}
+		if (type.equals("fixedblock"))
+			return new ContentStoreDirFixedBlock(indexXmlDir, create);
 		if (type.equals("utf8zip"))
 			return new ContentStoreDirZip(indexXmlDir, create);
 		if (type.equals("utf8"))
 			return new ContentStoreDirUtf8(indexXmlDir, create);
-		if (type.equals("utf16"))
-			return new ContentStoreDir(indexXmlDir, create);
+		if (type.equals("utf16")) {
+			throw new RuntimeException("UTF-16 content store is deprecated. Please re-index your data.");
+		}
 		throw new RuntimeException("Unknown content store type " + type);
 	}
 
@@ -1764,7 +1765,6 @@ public class Searcher implements Closeable {
 			indexPath = Files.readSymbolicLink(indexPath);
 		}
 		Directory indexLuceneDir = FSDirectory.open(indexPath);
-		@SuppressWarnings("resource")
 		Analyzer defaultAnalyzer = analyzer == null ? new BLDutchAnalyzer() : analyzer;
 		IndexWriterConfig config = Utilities.getIndexWriterConfig(defaultAnalyzer, create);
 		IndexWriter writer = new IndexWriter(indexLuceneDir, config);
@@ -2004,7 +2004,7 @@ public class Searcher implements Closeable {
 	/**
 	 * Instantiate analyzer based on an analyzer alias.
 	 *
-	 * @param analyzerName the classname, optionally preceded by the package name
+	 * @param analyzerName type of analyzer (default|whitespace|standard|nontokenizing)
 	 * @return the analyzer, or null if the name wasn't recognized
 	 */
 	static Analyzer getAnalyzerInstance(String analyzerName) {
