@@ -287,6 +287,8 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					Attributes attributes) {
 				speaker = attributes.getValue("speaker");
 				ids = new ArrayList<String>();
+				if (insideElement())
+			        super.startElement(uri, localName, qName, attributes);
 			}
 
 			@Override
@@ -297,6 +299,8 @@ public class DocIndexerWhiteLab2 extends DocIndexerXmlHandlers {
 					propBeginTime.addValue("");
 					propEndTime.addValue("");
 				}
+				if (insideElement())
+			        super.endElement(uri, localName, qName);
 			}
 		});
 
