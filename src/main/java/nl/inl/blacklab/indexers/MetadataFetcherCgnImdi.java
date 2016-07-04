@@ -206,16 +206,16 @@ public class MetadataFetcherCgnImdi extends MetadataFetcher {
 			elementStack.remove(elementStack.size() - 1);
 		}
 
-		/**
-		 * Get the name of the current element's parent element
-		 * from the element stack.
-		 * @return the parent element name
-		 */
-		private String getParentElName() {
-			if (elementStack.size() < 2)
-				return "";
-			return elementStack.get(elementStack.size() - 2);
-		}
+//		/**
+//		 * Get the name of the current element's parent element
+//		 * from the element stack.
+//		 * @return the parent element name
+//		 */
+//		private String getParentElName() {
+//			if (elementStack.size() < 2)
+//				return "";
+//			return elementStack.get(elementStack.size() - 2);
+//		}
 
 		public MetadataParser() {
 			indexFieldAs.put("iso-639-3-code", "Language-iso-code");
@@ -239,14 +239,8 @@ public class MetadataFetcherCgnImdi extends MetadataFetcher {
 					// Yes, leaf element with text content.
 					// Index the value of this element as a metadata field.
 
-					// Check the parent element name to see if we need to
-					// add a prefix to distinguish elements with the same name.
-					// (e.g. Source/Country and ResidencePlace/Country)
-					String parentElName = getParentElName();
-					if (localName.equals("Country") && !parentElName.equals("Source")) {
-						// Add prefix to distinguish Country under Source from other Country els
-						// (so Country under ResidencePlace becomes ResidencePlace_Country, etc.)
-						localName = parentElName + "_Country";
+					if (localName.equals("Id")) {
+						localName = "LanguageId";
 					}
 
 					// See if we want to index this element under a different name.
