@@ -2,6 +2,23 @@
 
 ## Improvements in HEAD
 
+## Improvements up to v1.3.6
+
+### Fixed
+* Content store growing larger than 2 GB caused an integer overflow.
+* Fixed bug with element matching in DocIndexers.
+* Fixed rare bug while storing document in ContentStoreDirFixedBlock.
+
+## Improvements up to v1.3.5
+
+### Fixed
+* BLSpanOrQuery would occasionally miss valid hits due to a
+  bug in the advanceStartPoint() method.
+
+### Changed
+* Switched to JavaCC 6.x.
+* Added default unknown condition and value to indextemplate.json, so you can specify what to do if a metadata field value is missing without specifying it for each field separately.
+
 ## Improvements up to v1.3.4
 
 ### Fixed
@@ -38,7 +55,7 @@
 
 ### Added
 * Searcher now implements Closeable, so it can be used with the try-with-resources statement.
-* You can specify that properties should not get a forward index using the complexField property "noForwardIndexProps" (space-separated list of property names) in indexstructure.json.
+* You can specify that properties should not get a forward index using the complexField property "noForwardIndexProps" (space-separated list of property names) in indextemplate.json.
 
 ### Fixed
 * Forward index terms is no longer limited to around 2 GB.
